@@ -1,7 +1,7 @@
 //Image Viewer
 
 #include "imageViewer.h"
-#include "linemath.h"
+#include "linmath.h"
 
 Image *image;
 
@@ -19,7 +19,7 @@ const GLubyte Indices[] = {
 	2, 3, 0
 };
 
-char* vertex_shader_src =
+char* vertex_shader_text =
 "uniform mat4 MVP;\n"
 "attribute vec2 TexCoordIn;\n"
 "attribute vec2 vPos;\n"
@@ -31,8 +31,8 @@ char* vertex_shader_src =
 "}\n";
 
 
-char* fragment_shader_src =
-"varying vec2 TexCoordOut;\n"
+char* fragment_shader_text =
+"varying lowp vec2 TexCoordOut;\n"
 "uniform sampler2D Texture;\n"
 "void main()\n"
 "{\n"
@@ -58,7 +58,7 @@ int read_ppm(char *input_file) {
 	}
 
 	c = fgetc(fp);
-	if (c != P) {
+	if (c != 'P') {
 		fprintf(stderr, "Error: Filetype incompatible\n");
 		exit(1);
 	}
@@ -390,6 +390,12 @@ int main(int argc, char *argv[]) {
 	if (!glfwInit())
 		exit(EXIT_FAILURE);
 
+	glfwDefaultWindowHints();
+	glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
 	window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
 	if (!window)
 	{
@@ -464,6 +470,8 @@ int main(int argc, char *argv[]) {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texID);
 	glUniform1i(tex_location, 0);
+
+	printf("Everything is set up\n");
 
 	while (!glfwWindowShouldClose(window))
 	{
