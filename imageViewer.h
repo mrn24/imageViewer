@@ -1,12 +1,6 @@
 //Image Viewer Header File
 
-#ifdef _APPLE_
-#include <GLUT/glut.h>
-#else
-#include <GL/glut.h>
-#endif
 
-#include <GLES2/gl2.h>
 #include <GLFW/glfw3.h>
 
 #include <stdlib.h>
@@ -25,6 +19,6 @@ typedef struct Image {
 }Image;
 
 typedef struct {
-	float position[3];
-	float color[4];
+	float Position[2];
+	float TexCoord[2];
 } Vertex;
