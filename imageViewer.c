@@ -5,6 +5,41 @@
 
 Image *image;
 
+Vertex vertices[] = {
+	{ { -1, 1 },{ 0, 0 } },
+	{ { 1, 1 },{ 1, 0 } },
+	{ { -1, -1 },{ 0, 1 } },
+	{ { 1, 1 },{ 1, 0 } },
+	{ { 1, -1 },{ 1, 1 } },
+	{ { -1, -1 },{ 0, 1 } }
+};
+
+const GLubyte Indices[] = {
+	0, 1, 2,
+	2, 3, 0
+};
+
+char* vertex_shader_src =
+"uniform mat4 MVP;\n"
+"attribute vec2 TexCoordIn;\n"
+"attribute vec2 vPos;\n"
+"varying vec2 TexCoordOut;\n"
+"void main()\n"
+"{\n"
+"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
+"    TexCoordOut = TexCoordIn;\n"
+"}\n";
+
+
+char* fragment_shader_src =
+"varying vec2 TexCoordOut;\n"
+"uniform sampler2D Texture;\n"
+"void main()\n"
+"{\n"
+"    gl_FragColor = texture2D(Texture, TexCoordOut);\n"
+"}\n";
+
+
 
 //Read P3 and P6
 int read_ppm(char *input_file) {
