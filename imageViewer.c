@@ -3,6 +3,14 @@
 #include "imageViewer.h"
 #include "linmath.h"
 
+float rotate = 0;
+float scale = 1;
+float shear = 0;
+float size = 0;
+float translateX = 0;
+float translateY = 0;
+
+
 Image *image;
 
 Vertex vertices[] = {
@@ -42,13 +50,14 @@ char* fragment_shader_text =
 
 
 //Read P3 and P6
-int read_ppm(char *input_file) {
+int read_ppm(char *input) {
 	FILE *fp;
-	int n, c, i, j, k;
+	int c, i, j, k;
+	int height, width, range;
 
-	fp = fopen(input_file, "r");
+	fp = fopen(input, "r");
 	if (fp == 0) {
-		fp = fopen(input_file, "rb");
+		fp = fopen(input, "rb");
 	}
 
 	if (fp == 0) {
@@ -63,7 +72,6 @@ int read_ppm(char *input_file) {
 		exit(1);
 	}
 
-
 	image = (Image*)malloc(sizeof(Image));
 	if (image == 0) {
 		fprintf(stderr, "Error: Memory allocation unsuccessful\n");
@@ -74,19 +82,34 @@ int read_ppm(char *input_file) {
 
 	image->format = c;
 
+	while ((c = fgetc(fp)) != '\n') {
+
+	}
+	c = fgetc(fp);
+
+	while (c == '#') {
+		while ((c = fgetc(fp)) != '\n') {
+		}
+	}
+
+	ungetc(c, fp);
+
 	if (fscanf(fp, "%d %d", &image->width, &image->height) != 2) {
 		fprintf(stderr, "Error: Width and Height missing\n");
 		exit(1);
 	}
+	width = image->width;
+	height = image->height;
 
-	fscanf(fp, "%d", &image->range);
 
-	if (image->range != MAX_COLORS) {
+	fscanf(fp, "%d", &range);
+
+	if (range != MAX_COLORS) {
 		fprintf(stderr, "Error: Expected range of %d not found\n", MAX_COLORS);
 		exit(1);
 	}
 
-	image->buffer = (RGBpixel*)malloc((MAX_COLORS + 1)*image->width * image->height);
+	image->buffer = (RGBpixel*)malloc((MAX_COLORS + 1)*width*height);
 
 	if (image->buffer == 0) {
 		fprintf(stderr, "Error: Memory allocation unsuccessful\n");
@@ -95,20 +118,33 @@ int read_ppm(char *input_file) {
 
 	fgetc(fp);
 	if (image->format == '3') {
+		printf("P3\n");
 		i = 0;
 
-		for (i = 0; i < image->height * image->width; i++) {
+		for (i = 0; i < width*height; i++) {
+			int n;
 			fscanf(fp, "%d", &n);
 			image->buffer[i].r = n;
+
+			printf("%d\n", n);
+
 			fscanf(fp, "%d", &n);
 			image->buffer[i].g = n;
+
+			printf("%d\n", n);
+
 			fscanf(fp, "%d", &n);
 			image->buffer[i].b = n;
+
+			printf("%d\n", n);
 		}
 	}
 	if (image->format == '6') {
-		fread(image->buffer, (sizeof(&image->buffer)), image->height * image->width, fp);
+		printf("P6\n");
+		fread(image->buffer, (sizeof(&image->buffer)), width*height, fp);
 	}
+
+
 	fclose(fp);
 	return 0;
 }
@@ -118,12 +154,7 @@ static void error_callback(int error, const char* description)
 	fprintf(stderr, "Error: %s\n", description);
 }
 
-float rotate = 0;
-float scale = 1;
-float sheer = 0;
-float size = 0;
-float translateX = 0;
-float translateY = 0;
+
 
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -134,10 +165,10 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 			glfwSetWindowShouldClose(window, GLFW_TRUE);
 			break;
 		case GLFW_KEY_Q:
-			rotate += PI / 4;
+			rotate += PI/2;
 			break;
 		case GLFW_KEY_E:
-			rotate -= PI / 4;
+			rotate -= PI/2;
 			break;
 		case GLFW_KEY_W:
 			translateY += 1;
@@ -372,7 +403,7 @@ int main(int argc, char *argv[]) {
 
 	char *picture = argv[1];
 	read_ppm(picture);
-
+	printf("image width: %d, image height: %d, input type: %d", image->width, image->height, image->format);
 	size = (float)image->width / (float)image->height;
 	vertices[0].Position[0] *= size;
 	vertices[1].Position[0] *= size;
@@ -382,7 +413,7 @@ int main(int argc, char *argv[]) {
 	vertices[5].Position[0] *= size;
 
 	GLFWwindow* window;
-	GLuint vertex_buffer, vertex_shader, fragment_shader, program;
+	GLuint vertex_buffer, vertex_shader, fragment_shader, program, index_buffer;
 	GLint mvp_location, vpos_location, vcol_location;
 
 	glfwSetErrorCallback(error_callback);
@@ -396,7 +427,7 @@ int main(int argc, char *argv[]) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-	window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
+	window = glfwCreateWindow(640, 480, "Transform Away", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();
@@ -409,11 +440,13 @@ int main(int argc, char *argv[]) {
 	// gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
 	glfwSwapInterval(1);
 
-	// NOTE: OpenGL error checks have been omitted for brevity
-
 	glGenBuffers(1, &vertex_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &index_buffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Indices), Indices, GL_STATIC_DRAW);
 
 	vertex_shader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
@@ -427,7 +460,6 @@ int main(int argc, char *argv[]) {
 	glAttachShader(program, vertex_shader);
 	glAttachShader(program, fragment_shader);
 	glLinkProgram(program);
-	// more error checking! glLinkProgramOrDie!
 
 	mvp_location = glGetUniformLocation(program, "MVP");
 	assert(mvp_location != -1);
@@ -464,7 +496,7 @@ int main(int argc, char *argv[]) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->width, image->height, 0, GL_RGB,
 		GL_UNSIGNED_BYTE, image->buffer);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -477,7 +509,7 @@ int main(int argc, char *argv[]) {
 	{
 		float ratio;
 		int width, height;
-		mat4x4 m, p, mvp;
+		mat4x4 m, p, mvp, rotm, transm, shearm, scalem, arm;
 
 		glfwGetFramebufferSize(window, &width, &height);
 		ratio = width / (float)height;
@@ -486,17 +518,34 @@ int main(int argc, char *argv[]) {
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		mat4x4_identity(m);
-		mat4x4_rotate_Z(m, m, (float)glfwGetTime());
+		mat4x4_identity(rotm);
+		mat4x4_identity(transm);
+		mat4x4_identity(shearm);
+		mat4x4_identity(scalem);
+
+
+		mat4x4_rotate_Z(rotm, rotm, rotate);
+		mat4x4_translate(transm, translateX, translateY, 0);
+		mat4x4_scale_aniso(scalem, scalem, scale, scale, scale);
+		mat4x4_shear(shearm, shearm, shear, shear);
+
+		mat4x4_add(m, rotm, m);
+		mat4x4_add(m, transm, m);
+		mat4x4_add(m, shearm, m);
+		mat4x4_add(m, scalem, m);
+
 		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
 		mat4x4_mul(mvp, p, m);
 
 		glUseProgram(program);
 		glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*)mvp);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+	glfwDestroyWindow(window);
 
-	return 0;
+	glfwTerminate();
+	exit(EXIT_SUCCESS);
 }
