@@ -1,5 +1,2 @@
-all: imageViewer.c
-	gcc imageViewer.c -o imageViewer -lm
-
-clean:
-	rm -rf imageViewer.*~
+all:
+	cl /MD /I. *.lib ezview.c
