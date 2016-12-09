@@ -11,3 +11,6 @@ Up/Down Arrow - Scale
 
 Compile with make
 Execute with ezview input.ppm
+
+
+NOTE: You must download the OpenGL starter kit and implant these files inside.
